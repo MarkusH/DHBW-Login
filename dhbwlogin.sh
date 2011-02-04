@@ -60,17 +60,30 @@ workdir="`dirname \"$0\"`";
 echo "DHBW Autologin Script";
 echo "You want to log in as $username.";
 echo "I'll check in intervals of $sleeptime for connections to $pingaddress.";
-exec 3> >(zenity --notification --window-icon=$workdir/dhbwicon.ico --listen);
+exec 3> >(zenity --notification --window-icon=$workdir/network-offline.png --listen);
 echo "tooltip:DHBW-Autologin – noch kein Verbindungsversuch unternommen" >&3;
-echo -e "\n\n---\n`date`: Start script" >> $logfile;
+echo -e "---\n`date`: Start script" >> $logfile;
+sleep 2;
+flag=0;
 
 setConnected () {
-	echo "icon:$workdir/dhbwicon.ico" >&3;
+	echo "icon:$workdir/network-transmit-receive.png" >&3;
 	echo "tooltip:DHBW-Autologin – verbunden" >&3;
+	if [ $flag -eq 0 ]
+	    then
+		flag=1;
+		echo "message:Im DHBW-WLAN angemeldet" >&3;
+		echo "`date`: Could connect to DHBWWebAuth." >> $logfile;
+	fi
 }
 setDisconnected () {
-	echo "icon:$workdir/dhbwicon-grey.ico" >&3;
+	echo "icon:$workdir/network-error.png" >&3;
 	echo "tooltip:DHBW-Autologin – nicht verbunden" >&3;
+	if [ $flag -eq 1 ]
+	    then
+		flag=0;
+		echo "message:Konnte nicht mit DHBW-WLAN verbinden." >&3;
+	fi
 }
 
 while(true)
@@ -89,19 +102,15 @@ do
 		echo "`date`: You're logged in.";
 	    else
 		echo "`date`: You're not logged in."
-		setDisconnected;
 		echo "`date`: Trying to log in.";
 		wget -T 5 -t 1 -O /dev/null --post-data 'buttonClicked=4&redirect_url=&err_flag=&info_flag=&info_msg=&username='$username'&password='$password'&Submit=Anmelden' "https://dhbwwebauth.dhbw-mannheim.de/login.html" > /dev/null 2>&1;
 		if [ $? -eq 0 ]
 		    then
 			echo "`date`: Successfully logged in.";
 			setConnected;
-			echo "message:Im DHBW-WLAN angemeldet" >&3;
-			echo "`date`: Could connect to DHBWWebAuth." >> $logfile;
 		    else
 			echo "`date`: Failed to log in. Try again in $sleeptime.";
 			setDisconnected;
-			echo "message:Fehler beim Anmelden im DHBW-WLAN." >&3;
 		fi
 	fi
 	sleep $sleeptime;
