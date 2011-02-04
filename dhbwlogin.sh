@@ -61,7 +61,7 @@ echo "DHBW Autologin Script";
 echo "You want to log in as $username.";
 echo "I'll check in intervals of $sleeptime for connections to $pingaddress.";
 exec 3> >(zenity --notification --window-icon=$workdir/dhbwicon.ico --listen);
-echo "tooltip:DHBW-Autologin – verbunden" >&3;
+echo "tooltip:DHBW-Autologin – noch kein Verbindungsversuch unternommen" >&3;
 echo -e "\n\n---\n`date`: Start script" >> $logfile;
 
 setConnected () {
@@ -75,11 +75,10 @@ setDisconnected () {
 
 while(true)
 do
-	ping -c 1 https://dhbwwebauth.dhbw-mannheim.de/login.html > /dev/null 2>&1;
-	if [ $? -ne 0 ]
+	if [ -z "`iwgetid -r`" -o "`iwgetid -r`" != "BaWebAuth" ]
 	    then
 		setDisconnected;
-		echo "`date`: Login server not found."
+		echo "`date`: You're not connected to BaWebAuth.";
 		sleep $sleeptime;
 		continue;
 	fi
