@@ -50,24 +50,24 @@ pingaddress=google.com
 sleeptime=15s
 #
 #  Where shall the log be stored?
-logfile="`dirname \"$0\"`/dhbwlogin.log"
+logfile="./dhbwlogin.log"
 #
 ###########################################################################
 #
 #  The script:
 
-workdir="`dirname \"$0\"`";
+cd "`dirname \"$0\"`";
 echo "DHBW Autologin Script";
 echo "You want to log in as $username.";
 echo "I'll check in intervals of $sleeptime for connections to $pingaddress.";
-exec 3> >(zenity --notification --window-icon=$workdir/network-offline.png --listen);
+exec 3> >(zenity --notification --window-icon=network-offline.png --listen);
 echo "tooltip:DHBW-Autologin – noch kein Verbindungsversuch unternommen" >&3;
 echo -e "---\n`date`: Start script" >> $logfile;
 sleep 2;
 flag=0;
 
 setConnected () {
-	echo "icon:$workdir/network-transmit-receive.png" >&3;
+	echo "icon:network-transmit-receive.png" >&3;
 	echo "tooltip:DHBW-Autologin – verbunden" >&3;
 	if [ $flag -eq 0 ]
 	    then
@@ -77,7 +77,7 @@ setConnected () {
 	fi
 }
 setDisconnected () {
-	echo "icon:$workdir/network-error.png" >&3;
+	echo "icon:network-error.png" >&3;
 	echo "tooltip:DHBW-Autologin – nicht verbunden" >&3;
 	if [ $flag -eq 1 ]
 	    then
