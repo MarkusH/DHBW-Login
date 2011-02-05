@@ -18,8 +18,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ###########################################################################
 #
+#  Important: Start this script every time with the full/absolute
+#  path to this file (e.g. "/home/username/DHBW-Login/dhbwlogin.sh").
+#
 #  This script uses an infinite loop. It checks in an interval as
-#  specified in "sleeptime" whether you are logged in to the DHBW
+#  specified in "sleeptime" whether you are logged into the DHBW
 #  WLAN. To check this it sends pings to the internet address as
 #  specified in "pingaddress".
 #
@@ -27,9 +30,10 @@
 #  login server with your userdata as specified in "username" and
 #  "password"
 #
-#  To run this script you need "wget", "ping" and "grep". These
-#  are standard packages in common Linux distributions so they
-#  should be installed.
+#  To run this script you need "wget", "ping", "grep" and "zenity"
+#  The first three are standard packages in common Linux distributions
+#  so they should be installed. "zenity" is a programm for Gnome
+#  desktop environment. Please ensure it is installed.
 #
 ###########################################################################
 #
@@ -50,36 +54,41 @@ pingaddress=google.com
 sleeptime=15s
 #
 #  Where shall the log be stored?
-logfile="./dhbwlogin.log"
+logfile="`dirname \"$0\"`/dhbwlogin.log"
 #
 ###########################################################################
 #
 #  The script:
 
-cd "`dirname \"$0\"`";
+workdir="`dirname \"$0\"`";
 echo "DHBW Autologin Script";
 echo "You want to log in as $username.";
 echo "I'll check in intervals of $sleeptime for connections to $pingaddress.";
-exec 3> >(zenity --notification --window-icon=network-offline.png --listen);
+
+#Create icon in Gnome panel
+exec 3> >(zenity --notification --window-icon=$workdir/network-offline.png --listen);
 echo "tooltip:DHBW-Autologin – noch kein Verbindungsversuch unternommen" >&3;
+
 echo -e "---\n`date`: Start script" >> $logfile;
 sleep 2;
-flag=0;
+flag=-1;
 
+#Changes the tray icon to visualize a successfull connection
 setConnected () {
-	echo "icon:network-transmit-receive.png" >&3;
+	echo "icon:$workdir/network-transmit-receive.png" >&3;
 	echo "tooltip:DHBW-Autologin – verbunden" >&3;
-	if [ $flag -eq 0 ]
+	if [ $flag -eq 0 -o $flag -eq -1 ]
 	    then
 		flag=1;
 		echo "message:Im DHBW-WLAN angemeldet" >&3;
 		echo "`date`: Could connect to DHBWWebAuth." >> $logfile;
 	fi
 }
+#Changes the tray icon to visualize a not existing connection
 setDisconnected () {
-	echo "icon:network-error.png" >&3;
+	echo "icon:$workdir/network-error.png" >&3;
 	echo "tooltip:DHBW-Autologin – nicht verbunden" >&3;
-	if [ $flag -eq 1 ]
+	if [ $flag -eq 1 -o $flag -eq -1 ]
 	    then
 		flag=0;
 		echo "message:Konnte nicht mit DHBW-WLAN verbinden." >&3;
@@ -88,6 +97,7 @@ setDisconnected () {
 
 while(true)
 do
+	#Check if the current wlan is the DHBW WLAN; if not try again later
 	if [ -z "`iwgetid -r`" -o "`iwgetid -r`" != "BaWebAuth" ]
 	    then
 		setDisconnected;
@@ -95,20 +105,26 @@ do
 		sleep $sleeptime;
 		continue;
 	fi
+	#Check if we can ping to a server outside the DHBW LAN
 	ping -c 1 $pingaddress > /dev/null 2>&1;
 	if [ $? -eq 0 ]
 	    then
+		#We are logged in
 		setConnected;
 		echo "`date`: You're logged in.";
 	    else
+		#We are not logged in
 		echo "`date`: You're not logged in."
 		echo "`date`: Trying to log in.";
+		#Send login data to login server
 		wget -T 5 -t 1 -O /dev/null --post-data 'buttonClicked=4&redirect_url=&err_flag=&info_flag=&info_msg=&username='$username'&password='$password'&Submit=Anmelden' "https://dhbwwebauth.dhbw-mannheim.de/login.html" > /dev/null 2>&1;
 		if [ $? -eq 0 ]
 		    then
+			#We could connect:
 			echo "`date`: Successfully logged in.";
 			setConnected;
 		    else
+			#We could not connect
 			echo "`date`: Failed to log in. Try again in $sleeptime.";
 			setDisconnected;
 		fi
